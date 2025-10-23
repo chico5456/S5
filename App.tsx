@@ -32,6 +32,12 @@ interface Episode {
   challengeType: StatType[];
 }
 
+interface UntuckedEvent {
+  id: string;
+  quote: string;
+  queensInvolved: Queen[];
+}
+
 // --- Initial Data --- //
 
 const MOCK_IMAGES: Record<string, string> = {
@@ -92,16 +98,30 @@ const DRAMA_TEMPLATES = [
   "The queens are all annoyed with {Q1}'s constant excuses.",
   "{Q1} is delusinal and thinks she won the challenge.",
   "{Q1} threw a drink at {Q2} in the interior illusions lounge!",
+  "{Q1} stormed out of the lounge and {Q2} said, 'Don't let the door hit you!'.",
+  "{Q1} started reading everyone for filth while fanning herself dramatically.",
+  "{Q1} swears {Q2} copied her runway concept down to the rhinestones.",
+  "{Q1} is pacing while {Q2} yells that she didn't come here to make friends.",
+  "{Q1} whispered that {Q2} should have been in the bottom and chaos erupted.",
+  "{Q1} won't stop singing the challenge song and {Q2} is losing it.",
+  "{Q1} tried to hug {Q2}, but {Q2} told her to save the fake tears for the runway.",
+  "{Q1} is plotting revenge with a lipstick message if she goes home.",
+  "{Q1} is giving a motivational speech while {Q2} rolls her eyes in the background.",
+  "{Q1} found {Q2}'s padding in the trash and the conspiracy theories are flying.",
+  "{Q1} spilled a drink on {Q2}'s outfit and blamed it on nerves.",
+  "{Q1} is manifesting a win and sage-smudging the lounge while {Q2} coughs dramatically.",
+  "{Q1} called {Q2} out for coasting and the entire room went silent.",
+  "{Q1} is practicing her exit speech even though {Q2} thinks she's safe.",
 ];
 
 // --- Helper Functions & Components ---
 
 const getPlacementColor = (placement: Placement) => {
   switch (placement) {
-    case 'WIN': return 'bg-royalblue text-black border-yellow-500';
-    case 'HIGH': return 'bg-green-300 text-green-900 border-green-500';
-    case 'LOW': return 'bg-orange-300 text-orange-900 border-orange-500';
-    case 'BTM2': return 'bg-red-600 text-white border-red-800';
+    case 'WIN': return 'bg-[royalblue] text-white border-[rgba(65,105,225,0.6)]';
+    case 'HIGH': return 'bg-[lightblue] text-blue-900 border-[rgba(135,206,250,0.6)]';
+    case 'LOW': return 'bg-[lightpink] text-rose-900 border-[rgba(255,182,193,0.7)]';
+    case 'BTM2': return 'bg-[tomato] text-white border-[rgba(255,99,71,0.7)]';
     case 'ELIM': return 'bg-zinc-800 text-zinc-500 border-zinc-900';
     case 'WINNER': return 'bg-fuchsia-500 text-white border-fuchsia-300';
     case 'RUNNER-UP': return 'bg-zinc-300 text-zinc-900 border-zinc-400';
@@ -122,7 +142,7 @@ export default function DragRaceSimulator() {
   const [cast, setCast] = useState<Queen[]>(INITIAL_CAST);
   const [episodeIdx, setEpisodeIdx] = useState(-1);
   const [phase, setPhase] = useState<Phase>('PROMO');
-  const [untuckedDrama, setUntuckedDrama] = useState<string[]>([]);
+  const [untuckedDrama, setUntuckedDrama] = useState<UntuckedEvent[]>([]);
 
   // Producer Room State
   const [placements, setPlacements] = useState<Record<string, Placement>>({});
@@ -160,16 +180,21 @@ export default function DragRaceSimulator() {
 
   const generateUntuckedDrama = useCallback(() => {
     if (activeQueens.length < 2) return;
-    const drama = [];
-    const numEvents = Math.min(3, Math.floor(activeQueens.length / 2));
+    const drama: UntuckedEvent[] = [];
+    const numEvents = Math.min(6, Math.max(4, Math.floor(activeQueens.length / 1.5)));
     for (let i = 0; i < numEvents; i++) {
       const q1 = activeQueens[Math.floor(Math.random() * activeQueens.length)];
       let q2 = activeQueens[Math.floor(Math.random() * activeQueens.length)];
       while (q1.id === q2.id) q2 = activeQueens[Math.floor(Math.random() * activeQueens.length)];
-      
-      let template = DRAMA_TEMPLATES[Math.floor(Math.random() * DRAMA_TEMPLATES.length)];
-      template = template.replace('{Q1}', q1.name).replace('{Q2}', q2.name);
-      drama.push(template);
+
+      const template = DRAMA_TEMPLATES[Math.floor(Math.random() * DRAMA_TEMPLATES.length)];
+      const includesQ2 = template.includes('{Q2}');
+      const quote = template.replace('{Q1}', q1.name).replace('{Q2}', q2.name);
+      drama.push({
+        id: `${q1.id}-${q2.id}-${i}-${Date.now()}-${Math.random()}`,
+        quote,
+        queensInvolved: includesQ2 ? [q1, q2] : [q1],
+      });
     }
     setUntuckedDrama(drama);
   }, [activeQueens]);
@@ -332,9 +357,28 @@ export default function DragRaceSimulator() {
             <div className="relative z-10">
               <h2 className="text-5xl font-black italic uppercase text-zinc-300 mb-8 flex items-center gap-4"><HeartCrack className="text-pink-600" /> UNTUCKED LOUNGE</h2>
               <div className="space-y-6 mb-12">
-                {untuckedDrama.map((drama, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.3 }} className="bg-zinc-950/50 p-4 rounded-r-xl border-l-4 border-pink-600 text-xl italic text-zinc-300">
-                    "{drama}"
+                {untuckedDrama.map((event, i) => (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.2 }}
+                    className="bg-zinc-950/60 p-5 rounded-2xl border border-pink-700/40 text-lg text-zinc-200 shadow-inner"
+                  >
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="flex -space-x-2">
+                        {event.queensInvolved.map((queen) => (
+                          <img
+                            key={queen.id}
+                            src={queen.imageUrl}
+                            className="w-12 h-12 rounded-full border-2 border-pink-600 object-cover shadow-lg"
+                            alt={queen.name}
+                          />
+                        ))}
+                      </div>
+                      <span className="uppercase text-xs tracking-[0.4em] text-pink-500 font-black">DRAMA REPORT</span>
+                    </div>
+                    <p className="italic leading-relaxed">"{event.quote}"</p>
                   </motion.div>
                 ))}
               </div>
