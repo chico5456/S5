@@ -12,6 +12,7 @@ function cn(...inputs: ClassValue[]) {
 
 type StatType = 'design' | 'comedy' | 'acting' | 'improv' | 'dancing' | 'lipsync' | 'makeover' | 'singing' | 'branding';
 type Placement = 'WIN' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | 'WINNER' | 'RUNNER-UP' | 'DOUBLE SHANTAY';
+type ModifierStat = StatType | 'overall';
 type Phase = 'PROMO' | 'EPISODE_INTRO' | 'PERFORMING' | 'UNTUCKED' | 'PRODUCER_HUB' | 'LIPSYNC' | 'RESULTS' | 'CROWNING' | 'SEASON_END';
 
 interface Queen {
@@ -30,6 +31,28 @@ interface Episode {
   title: string;
   description: string;
   challengeType: StatType[];
+}
+
+interface UntuckedEvent {
+  id: string;
+  quote: string;
+  queensInvolved: Queen[];
+  impactSummary?: string[];
+}
+
+type ImpactTarget = 'Q1' | 'Q2' | 'Q3' | 'ALL_INVOLVED' | 'RANDOM_ACTIVE';
+
+interface UntuckedImpact {
+  targets: ImpactTarget | ImpactTarget[];
+  amount: number;
+  stat?: ModifierStat;
+  description: string;
+}
+
+interface UntuckedScenario {
+  template: string;
+  roles: ('Q1' | 'Q2' | 'Q3')[];
+  impacts?: UntuckedImpact[];
 }
 
 // --- Initial Data --- //
@@ -84,24 +107,114 @@ const EPISODES: Episode[] = [
   { number: 11, title: "Sugar Ball", description: "Create three looks for the Sugar Ball.", challengeType: ['design'] },
 ];
 
-const DRAMA_TEMPLATES = [
-  "{Q1} accused {Q2} of having someone else make her costume!",
-  "{Q1} is crying alone because the judges hated her look.",
-  "{Q1} and {Q2} got into a screaming match over a wig.",
-  "{Q1} told {Q2} she has no talent and is just relying on her body.",
-  "The queens are all annoyed with {Q1}'s constant excuses.",
-  "{Q1} is delusinal and thinks she won the challenge.",
-  "{Q1} threw a drink at {Q2} in the interior illusions lounge!",
+const UNTUCKED_SCENARIOS: UntuckedScenario[] = [
+  {
+    template: "{Q1} swiped the choreo notebook from {Q2} and refuses to share the counts.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: 'Q1', stat: 'dancing', amount: 1, description: "{Q1} gains a dance edge for the next performance." },
+      { targets: 'Q2', stat: 'dancing', amount: -0.8, description: "{Q2} is rattled and forgets key choreography." },
+    ],
+  },
+  {
+    template: "{Q1} and {Q2} lock themselves in the lounge to rehearse harmonies while everyone else bangs on the door.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: ['Q1', 'Q2'], stat: 'singing', amount: 0.9, description: "Their vocals get polished to perfection." },
+      { targets: 'RANDOM_ACTIVE', stat: 'singing', amount: -0.7, description: "{TARGET} misses the rehearsal and falls behind vocally." },
+    ],
+  },
+  {
+    template: "{Q1} reads {Q2}'s runway and {Q3} jumps in, turning the lounge into a three-way roast battle.",
+    roles: ['Q1', 'Q2', 'Q3'],
+    impacts: [
+      { targets: 'Q1', stat: 'acting', amount: 0.6, description: "{Q1} channels the drama into performance fire." },
+      { targets: 'Q2', stat: 'overall', amount: -0.6, description: "{Q2} spirals from the criticism." },
+      { targets: 'Q3', stat: 'improv', amount: 0.5, description: "{Q3} sharpens her improv claws jumping in." },
+    ],
+  },
+  {
+    template: "{Q1} discovers a producer gift: a secret pattern book, and {Q2} catches her photocopying it.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: 'Q1', stat: 'design', amount: 1.1, description: "{Q1} scores couture blueprints for the next challenge." },
+      { targets: 'Q2', stat: 'design', amount: -0.9, description: "{Q2} second-guesses every stitch afterward." },
+    ],
+  },
+  {
+    template: "{Q1} drags {Q2} into a brand strategy session and they storyboard a joint campaign.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: ['Q1', 'Q2'], stat: 'branding', amount: 0.8, description: "Their branding brains sync up." },
+    ],
+  },
+  {
+    template: "{Q1} 'accidentally' spills a cocktail all over {Q2}'s costume mock-up, sending her back to square one.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: 'Q2', stat: 'design', amount: -1.2, description: "{Q2} has to rebuild her look overnight." },
+      { targets: 'Q1', stat: 'overall', amount: 0.4, description: "{Q1} feeds off the chaos she created." },
+    ],
+  },
+  {
+    template: "{Q1} leads an impromptu roast workshop that leaves {Q2} in tears.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: 'Q1', stat: 'comedy', amount: 1, description: "{Q1}'s reads get razor sharp." },
+      { targets: 'Q2', stat: 'improv', amount: -0.8, description: "{Q2} loses her wit under pressure." },
+    ],
+  },
+  {
+    template: "{Q1} hacks the lounge TV and uncovers a teaser for the next challenge, whispering it to {Q2}.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: 'Q1', stat: 'overall', amount: 0.7, description: "{Q1} feels untouchable with insider info." },
+      { targets: 'Q2', stat: 'overall', amount: 0.5, description: "{Q2} quietly plans an edge for tomorrow." },
+      { targets: 'RANDOM_ACTIVE', stat: 'overall', amount: -0.6, description: "{TARGET} is left out of the secret and starts spiraling." },
+    ],
+  },
+  {
+    template: "{Q1} and {Q2} rehearse a double reveal, leaving {Q3} scrambling to match their gag.",
+    roles: ['Q1', 'Q2', 'Q3'],
+    impacts: [
+      { targets: ['Q1', 'Q2'], stat: 'dancing', amount: 0.9, description: "Their synchronicity is next level." },
+      { targets: 'Q3', stat: 'dancing', amount: -1, description: "{Q3} can't keep up with the planned stunt." },
+    ],
+  },
+  {
+    template: "{Q1} guides {Q2} through a meditation circle that calms the whole lounge.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: ['Q1', 'Q2'], stat: 'overall', amount: 0.4, description: "They refocus and recharge together." },
+      { targets: 'ALL_INVOLVED', stat: 'overall', amount: 0.2, description: "Everyone in the moment shakes off the nerves." },
+    ],
+  },
+  {
+    template: "{Q1} convinces producers to play {Q2}'s talent show tape for inspiration, and the lounge erupts.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: 'ALL_INVOLVED', stat: 'overall', amount: 0.3, description: "The room catches a second wind from the performance." },
+      { targets: 'Q2', stat: 'singing', amount: 0.6, description: "{Q2} relives the glory and feels unstoppable vocally." },
+    ],
+  },
+  {
+    template: "{Q1} sabotages the cocktail machine, leaving {Q2} caffeine-deprived and cranky.",
+    roles: ['Q1', 'Q2'],
+    impacts: [
+      { targets: 'Q2', stat: 'overall', amount: -0.7, description: "{Q2} drags from the energy crash." },
+      { targets: 'Q1', stat: 'comedy', amount: 0.4, description: "{Q1} weaponizes the chaos for shady confessionals." },
+    ],
+  },
 ];
 
 // --- Helper Functions & Components ---
 
 const getPlacementColor = (placement: Placement) => {
   switch (placement) {
-    case 'WIN': return 'bg-royalblue text-black border-yellow-500';
-    case 'HIGH': return 'bg-green-300 text-green-900 border-green-500';
-    case 'LOW': return 'bg-orange-300 text-orange-900 border-orange-500';
-    case 'BTM2': return 'bg-red-600 text-white border-red-800';
+    case 'WIN': return 'bg-[royalblue] text-white border-[rgba(65,105,225,0.6)]';
+    case 'HIGH': return 'bg-[lightblue] text-blue-900 border-[rgba(135,206,250,0.6)]';
+    case 'LOW': return 'bg-[lightpink] text-rose-900 border-[rgba(255,182,193,0.7)]';
+    case 'BTM2': return 'bg-[tomato] text-white border-[rgba(255,99,71,0.7)]';
     case 'ELIM': return 'bg-zinc-800 text-zinc-500 border-zinc-900';
     case 'WINNER': return 'bg-fuchsia-500 text-white border-fuchsia-300';
     case 'RUNNER-UP': return 'bg-zinc-300 text-zinc-900 border-zinc-400';
@@ -122,7 +235,8 @@ export default function DragRaceSimulator() {
   const [cast, setCast] = useState<Queen[]>(INITIAL_CAST);
   const [episodeIdx, setEpisodeIdx] = useState(-1);
   const [phase, setPhase] = useState<Phase>('PROMO');
-  const [untuckedDrama, setUntuckedDrama] = useState<string[]>([]);
+  const [untuckedDrama, setUntuckedDrama] = useState<UntuckedEvent[]>([]);
+  const [performanceModifiers, setPerformanceModifiers] = useState<Record<string, Partial<Record<ModifierStat, number>>>>({});
 
   // Producer Room State
   const [placements, setPlacements] = useState<Record<string, Placement>>({});
@@ -137,10 +251,22 @@ export default function DragRaceSimulator() {
 
   const runSimulation = useCallback(() => {
     if (!currentEpisode) return;
-    const scores = activeQueens.map(q => ({
-      id: q.id,
-      score: (currentEpisode.challengeType.reduce((acc, t) => acc + q.stats[t], 0) / currentEpisode.challengeType.length) + (Math.random() * 3 - 1.5)
-    })).sort((a, b) => b.score - a.score);
+
+    const calculateModifier = (queenId: string) => {
+      const mods = performanceModifiers[queenId];
+      if (!mods) return 0;
+      const overallBoost = mods.overall ?? 0;
+      const statBoost = currentEpisode.challengeType.reduce((acc, stat) => acc + (mods[stat] ?? 0), 0);
+      return overallBoost + (statBoost / Math.max(1, currentEpisode.challengeType.length));
+    };
+
+    const scores = activeQueens.map(q => {
+      const baseScore = currentEpisode.challengeType.reduce((acc, t) => acc + q.stats[t], 0) / currentEpisode.challengeType.length;
+      return {
+        id: q.id,
+        score: baseScore + calculateModifier(q.id) + (Math.random() * 3 - 1.5),
+      };
+    }).sort((a, b) => b.score - a.score);
 
     const newPlacements: Record<string, Placement> = {};
     const count = activeQueens.length;
@@ -156,22 +282,134 @@ export default function DragRaceSimulator() {
       newPlacements[s.id] = p;
     });
     setPlacements(newPlacements);
-  }, [activeQueens, currentEpisode]);
+    setPerformanceModifiers({});
+  }, [activeQueens, currentEpisode, performanceModifiers]);
 
   const generateUntuckedDrama = useCallback(() => {
     if (activeQueens.length < 2) return;
-    const drama = [];
-    const numEvents = Math.min(3, Math.floor(activeQueens.length / 2));
+
+    const availableScenarios = UNTUCKED_SCENARIOS.filter(scenario => new Set(scenario.roles).size <= activeQueens.length);
+    if (!availableScenarios.length) return;
+
+    const drama: UntuckedEvent[] = [];
+    const aggregatedModifiers: Record<string, Partial<Record<ModifierStat, number>>> = {};
+    const numEvents = Math.min(7, Math.max(5, Math.floor(activeQueens.length / 1.2)));
+
     for (let i = 0; i < numEvents; i++) {
-      const q1 = activeQueens[Math.floor(Math.random() * activeQueens.length)];
-      let q2 = activeQueens[Math.floor(Math.random() * activeQueens.length)];
-      while (q1.id === q2.id) q2 = activeQueens[Math.floor(Math.random() * activeQueens.length)];
-      
-      let template = DRAMA_TEMPLATES[Math.floor(Math.random() * DRAMA_TEMPLATES.length)];
-      template = template.replace('{Q1}', q1.name).replace('{Q2}', q2.name);
-      drama.push(template);
+      const scenario = availableScenarios[Math.floor(Math.random() * availableScenarios.length)];
+      const uniqueRoles = Array.from(new Set(scenario.roles));
+      const roleAssignments: Partial<Record<'Q1' | 'Q2' | 'Q3', Queen>> = {};
+      const pool = [...activeQueens];
+
+      uniqueRoles.forEach(role => {
+        if (!pool.length) return;
+        const idx = Math.floor(Math.random() * pool.length);
+        roleAssignments[role] = pool.splice(idx, 1)[0];
+      });
+
+      uniqueRoles.forEach(role => {
+        if (!roleAssignments[role]) {
+          const fallback = activeQueens.find(q => !Object.values(roleAssignments).some(existing => existing?.id === q.id)) || activeQueens[0];
+          roleAssignments[role] = fallback;
+        }
+      });
+
+      const replaceTokens = (text: string, targets?: Queen[]) => {
+        let output = text;
+        const applyToken = (value: string, token: string, replacement: string) => value.split(token).join(replacement);
+        (['Q1', 'Q2', 'Q3'] as const).forEach(role => {
+          const queen = roleAssignments[role];
+          if (queen) {
+            output = applyToken(output, `{${role}}`, queen.name);
+          }
+        });
+        if (output.includes('{TARGET}')) {
+          const names = targets && targets.length ? targets.map(t => t.name).join(' & ') : 'someone';
+          output = applyToken(output, '{TARGET}', names);
+        }
+        return output;
+      };
+
+      const involvedMap = new Map<string, Queen>();
+      Object.values(roleAssignments).forEach(queen => {
+        if (queen) involvedMap.set(queen.id, queen);
+      });
+
+      const impactSummary: string[] = [];
+      scenario.impacts?.forEach(impact => {
+        const targetKeys = Array.isArray(impact.targets) ? impact.targets : [impact.targets];
+        const targetedQueens: Queen[] = [];
+
+        targetKeys.forEach(target => {
+          switch (target) {
+            case 'Q1':
+            case 'Q2':
+            case 'Q3': {
+              const queen = roleAssignments[target];
+              if (queen) targetedQueens.push(queen);
+              break;
+            }
+            case 'ALL_INVOLVED': {
+              targetedQueens.push(...Array.from(involvedMap.values()));
+              break;
+            }
+            case 'RANDOM_ACTIVE': {
+              const alreadyTargeted = new Set(targetedQueens.map(q => q.id));
+              const involvedIds = new Set(involvedMap.keys());
+              const fallbackPool = activeQueens.filter(q => !alreadyTargeted.has(q.id));
+              const options = fallbackPool.filter(q => !involvedIds.has(q.id));
+              const poolToUse = options.length ? options : fallbackPool;
+              if (poolToUse.length) {
+                const randomQueen = poolToUse[Math.floor(Math.random() * poolToUse.length)];
+                targetedQueens.push(randomQueen);
+              }
+              break;
+            }
+          }
+        });
+
+        const uniqueTargets = Array.from(new Map(targetedQueens.map(q => [q.id, q])).values());
+        uniqueTargets.forEach(queen => involvedMap.set(queen.id, queen));
+
+        const statKey = impact.stat ?? 'overall';
+        uniqueTargets.forEach(targetQueen => {
+          if (!aggregatedModifiers[targetQueen.id]) aggregatedModifiers[targetQueen.id] = {};
+          const existing = aggregatedModifiers[targetQueen.id]![statKey] ?? 0;
+          aggregatedModifiers[targetQueen.id]![statKey] = existing + impact.amount;
+        });
+
+        if (impact.description) {
+          impactSummary.push(replaceTokens(impact.description, uniqueTargets));
+        }
+      });
+
+      const quote = replaceTokens(scenario.template);
+      drama.push({
+        id: `${i}-${Date.now()}-${Math.random()}`,
+        quote,
+        queensInvolved: Array.from(involvedMap.values()),
+        impactSummary: impactSummary.length ? impactSummary : undefined,
+      });
     }
+
     setUntuckedDrama(drama);
+
+    if (Object.keys(aggregatedModifiers).length) {
+      setPerformanceModifiers(prev => {
+        const updated = { ...prev };
+        Object.entries(aggregatedModifiers).forEach(([queenId, mods]) => {
+          if (!mods) return;
+          const current = { ...(updated[queenId] || {}) } as Partial<Record<ModifierStat, number>>;
+          Object.entries(mods).forEach(([stat, amount]) => {
+            if (amount === undefined) return;
+            const key = stat as ModifierStat;
+            current[key] = (current[key] ?? 0) + amount;
+          });
+          updated[queenId] = current;
+        });
+        return updated;
+      });
+    }
   }, [activeQueens]);
 
   // --- Phase Transitions ---
@@ -208,11 +446,10 @@ export default function DragRaceSimulator() {
       if (q.status !== 'active') return q;
       let p = placements[q.id] || 'SAFE';
       
-      if (doubleShantay && placements[q.id] === 'BTM2') {
-         p = 'DOUBLE SHANTAY';
-      } else if (q.id === eliminatedId) {
-         p = 'ELIM'; elimQueen = q; 
-         return { ...q, status: 'eliminated', trackRecord: [...q.trackRecord, 'ELIM'], eliminatedEpisode: currentEpisode?.number };
+      if (q.id === eliminatedId) {
+        p = 'ELIM';
+        elimQueen = q;
+        return { ...q, status: 'eliminated', trackRecord: [...q.trackRecord, 'ELIM'], eliminatedEpisode: currentEpisode?.number };
       }
       return { ...q, trackRecord: [...q.trackRecord, p] };
     }));
@@ -332,9 +569,38 @@ export default function DragRaceSimulator() {
             <div className="relative z-10">
               <h2 className="text-5xl font-black italic uppercase text-zinc-300 mb-8 flex items-center gap-4"><HeartCrack className="text-pink-600" /> UNTUCKED LOUNGE</h2>
               <div className="space-y-6 mb-12">
-                {untuckedDrama.map((drama, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.3 }} className="bg-zinc-950/50 p-4 rounded-r-xl border-l-4 border-pink-600 text-xl italic text-zinc-300">
-                    "{drama}"
+                {untuckedDrama.map((event, i) => (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.2 }}
+                    className="bg-zinc-950/60 p-5 rounded-2xl border border-pink-700/40 text-lg text-zinc-200 shadow-inner"
+                  >
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="flex -space-x-2">
+                        {event.queensInvolved.map((queen) => (
+                          <img
+                            key={queen.id}
+                            src={queen.imageUrl}
+                            className="w-12 h-12 rounded-full border-2 border-pink-600 object-cover shadow-lg"
+                            alt={queen.name}
+                          />
+                        ))}
+                      </div>
+                      <span className="uppercase text-xs tracking-[0.4em] text-pink-500 font-black">DRAMA REPORT</span>
+                    </div>
+                    <p className="italic leading-relaxed">"{event.quote}"</p>
+                    {event.impactSummary && (
+                      <ul className="mt-4 space-y-1 text-sm text-pink-200">
+                        {event.impactSummary.map((summary, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <Flame className="w-4 h-4 mt-0.5 text-pink-400" />
+                            <span>{summary}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </motion.div>
                 ))}
               </div>
@@ -443,12 +709,12 @@ export default function DragRaceSimulator() {
                 </thead>
                 <tbody>
                   {[...cast].sort((a,b) => (a.status === 'active' ? -1 : 1) - (b.status === 'active' ? -1 : 1) || (b.eliminatedEpisode || 99) - (a.eliminatedEpisode || 99)).map(q => (
-                    <tr key={q.id} className={cn("border-b border-zinc-800/50", q.status === 'eliminated' && "opacity-40 grayscale")}>
+                    <tr key={q.id} className="border-b border-zinc-800/50">
                       <td className="p-3 font-bold flex items-center gap-2">
                         <img src={q.imageUrl} className="w-6 h-6 rounded-full object-cover" /> {q.name}
                       </td>
                       {q.trackRecord.map((p, i) => (
-                        <td key={i} className="p-1 text-center"><div className={cn("px-2 py-1 rounded text-[10px] font-black uppercase w-full", getPlacementColor(p))}>{p === 'DOUBLE SHANTAY' ? 'SAVE' : p}</div></td>
+                        <td key={i} className="p-1 text-center"><div className={cn("px-2 py-1 rounded text-[10px] font-black uppercase w-full", getPlacementColor(p))}>{p}</div></td>
                       ))}
                     </tr>
                   ))}
